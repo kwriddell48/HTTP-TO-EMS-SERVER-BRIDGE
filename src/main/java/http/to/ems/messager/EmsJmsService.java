@@ -2,8 +2,6 @@ package http.to.ems.messager;
 
 import javax.jms.*;
 import com.tibco.tibjms.TibjmsConnectionFactory;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -48,9 +46,15 @@ public class EmsJmsService {
     private static final int MAX_PROPERTY_VALUE_BYTES = 4096;    /* align with correlation ID limit */
 
     private final MessageMetrics metrics;
+    private final EmsConnectionPool connectionPool;
 
     public EmsJmsService(MessageMetrics metrics) {
+        this(metrics, new EmsConnectionPool());
+    }
+
+    public EmsJmsService(MessageMetrics metrics, EmsConnectionPool connectionPool) {
         this.metrics = metrics;
+        this.connectionPool = connectionPool;
         if (LOG.isLoggable(Level.FINE)) {
             LOG.log(Level.FINE, "[{0}] EmsJmsService created", java.time.Instant.now());
         }
@@ -94,21 +98,17 @@ public class EmsJmsService {
         if (timeoutMs <= 0) timeoutMs = DEFAULT_TIMEOUT_MS;
         Connection connection = null;
         Session session = null;
+        boolean connectionOk = false;
         try {
-            TibjmsConnectionFactory factory = new TibjmsConnectionFactory(serverUrl);
-            factory.setUserName(user);
-            if (password != null && !password.isEmpty()) {
-                factory.setUserPassword(password);
-            }
             if (LOG.isLoggable(Level.FINE)) {
-                LOG.log(Level.FINE, "[{0}] Connecting to EMS", java.time.Instant.now());
+                LOG.log(Level.FINE, "[{0}] Getting connection from pool", java.time.Instant.now());
             }
-            connection = factory.createConnection();
-            connection.start();
+            connection = connectionPool.getConnection(serverUrl, user, password);
             session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
             Destination destQu1 = session.createQueue(queue1);
+            connectionOk = true;
             if (LOG.isLoggable(Level.FINE)) {
-                LOG.log(Level.FINE, "[{0}] Connected, session created, destQu1={1}", new Object[]{java.time.Instant.now(), queue1});
+                LOG.log(Level.FINE, "[{0}] Session created, destQu1={1}", new Object[]{java.time.Instant.now(), queue1});
             }
 
             if (publishOnly) {
@@ -117,6 +117,7 @@ public class EmsJmsService {
                 return sendRequestReply(session, connection, destQu1, queue2Reply, timeoutMs, correlationId, messageBody, requestHeaders, debugEnabled);
             }
         } catch (JMSException e) {
+            connectionOk = false;
             if (debugEnabled && LOG.isLoggable(Level.FINE)) {
                 LOG.log(Level.FINE, "[{0}] EMS connection/send failed: {1}", new Object[]{java.time.Instant.now(), e.getMessage()});
             }
@@ -125,9 +126,15 @@ public class EmsJmsService {
             return new Result(503, formatError(503, msg, requestHeaders), inferContentType(requestHeaders));
         } finally {
             closeQuietly(session);
-            closeQuietly(connection);
+            if (connection != null) {
+                if (connectionOk) {
+                    connectionPool.returnConnection(connection, serverUrl, user, password);
+                } else {
+                    connectionPool.discardConnection(connection, serverUrl, user, password);
+                }
+            }
             if (LOG.isLoggable(Level.FINE)) {
-                LOG.log(Level.FINE, "[{0}] send exit connection closed", java.time.Instant.now());
+                LOG.log(Level.FINE, "[{0}] send exit, connection returned to pool", java.time.Instant.now());
             }
         }
     }
@@ -354,10 +361,7 @@ public class EmsJmsService {
 
     /** Default JMS correlation ID when none provided: hostname concatenated with UUID. */
     private static String defaultCorrelationId() {
-        String host = "unknown";
-        try {
-            host = InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException ignored) { }
+        String host = HostnameCache.getHostname();
         String id = host + "-" + UUID.randomUUID().toString();
         if (LOG.isLoggable(Level.FINE)) {
             LOG.log(Level.FINE, "[{0}] defaultCorrelationId host={1} id={2}", new Object[]{java.time.Instant.now(), host, id});

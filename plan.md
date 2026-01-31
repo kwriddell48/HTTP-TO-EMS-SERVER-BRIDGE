@@ -149,6 +149,26 @@
 
 ---
 
+## Efficiency Optimization Summary
+
+| Optimization | Impact | Effort | Status |
+|--------------|--------|--------|--------|
+| **Connection pooling** | High | Medium | Done |
+| **Factory caching** | High | Low | Done |
+| **Hostname caching** | Medium | Low | Done |
+| **Compute inferContentType once** | Low | Low | Pending |
+| **Fixed thread pool** | Medium | Low | Done |
+| **Header normalization cache** | Low | Low | Pending |
+| **Content-Length pre-allocation** | Low | Low | Pending |
+| **Destination caching** | Low | Low | Pending |
+
+**Implemented:**
+- `EmsConnectionPool` – caches `TibjmsConnectionFactory` per (serverUrl, user, password) and pools Connections (max 10 per endpoint, 5 idle).
+- `HostnameCache` – resolves hostname once at class load; used by HttpServerApp, EmsJmsService, and EmsReplyListener for default correlation ID and reply location.
+- Fixed thread pool – HttpServer uses `newFixedThreadPool(max(16, processors*4))` instead of cached pool to avoid thread creation overhead.
+
+---
+
 ## Architecture Decisions
 
 ### ADR-001: JDK 1.8 (Java 8) Default
