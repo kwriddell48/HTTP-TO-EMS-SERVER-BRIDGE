@@ -7,9 +7,7 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,6 +27,7 @@ public class HttpServerApp {
 
     private static final Logger LOG = Logger.getLogger(HttpServerApp.class.getName());
     private static final int DEFAULT_PORT = 8080;
+    private static final int DEFAULT_THREAD_POOL_SIZE = Math.max(16, Runtime.getRuntime().availableProcessors() * 4);
 
     /** Header keys: first character uppercase, rest lowercase (map key convention). */
     private static final Set<String> CONTROL_HEADERS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
@@ -61,7 +60,7 @@ public class HttpServerApp {
             server.createContext("/api", this::handle);
             server.createContext("/metrics", this::handleMetrics);
             server.createContext("/stats", this::handleMetrics);
-            server.setExecutor(Executors.newCachedThreadPool());
+            server.setExecutor(Executors.newFixedThreadPool(DEFAULT_THREAD_POOL_SIZE));
             server.start();
             if (LOG.isLoggable(Level.FINE)) {
                 LOG.log(Level.FINE, "[{0}] HTTP server started", java.time.Instant.now());
@@ -230,10 +229,7 @@ public class HttpServerApp {
 
     /** Default JMS correlation ID when none provided: hostname concatenated with UUID. */
     private static String defaultCorrelationId() {
-        String host = "unknown";
-        try {
-            host = InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException ignored) { }
+        String host = HostnameCache.getHostname();
         String id = host + "-" + java.util.UUID.randomUUID().toString();
         if (LOG.isLoggable(Level.FINE)) {
             LOG.log(Level.FINE, "[{0}] defaultCorrelationId generated host={1} id={2}", new Object[]{java.time.Instant.now(), host, id});

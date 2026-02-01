@@ -126,16 +126,12 @@ public class EmsReplyListener {
     }
 
     private static String getHostname() {
-        try {
-            return InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException e) {
-            return "unknown";
-        }
+        return HostnameCache.getHostname();
     }
 
     private static String getLocation() {
         try {
-            String host = InetAddress.getLocalHost().getHostName();
+            String host = HostnameCache.getHostname();
             String addr = InetAddress.getLocalHost().getHostAddress();
             return host + " (" + addr + ")";
         } catch (UnknownHostException e) {
