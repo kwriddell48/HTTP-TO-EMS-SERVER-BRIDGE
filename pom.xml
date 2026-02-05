@@ -6,7 +6,7 @@
 
     <groupId>http.to.ems.messager</groupId>
     <artifactId>java-http-to-ems</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
     <packaging>jar</packaging>
     <name>Java HTTP to EMS</name>
     <description>HTTP server that accepts GET/POST and forwards to TIBCO EMS via JMS</description>
@@ -30,9 +30,17 @@
             <artifactId>tibjms</artifactId>
             <version>8.6</version>
             <scope>system</scope>
-            <systemPath>C:\JAVA-JARS\tibjms.jar</systemPath>
+            <systemPath>${project.basedir}/lib/tibjms.jar</systemPath>
             <optional>true</optional>
         </dependency>
+		<dependency>
+		  <groupId>com.tibco</groupId>
+		  <artifactId>tibems</artifactId>
+		  <version>8.6.0</version>
+		  <scope>system</scope>
+		  <systemPath>${project.basedir}/lib/jms-2.0.jar</systemPath>
+		</dependency>
+		
     </dependencies>
 
     <build>
