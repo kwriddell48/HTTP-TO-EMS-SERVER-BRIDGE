@@ -6,10 +6,10 @@
 
     <groupId>http.to.ems.messager</groupId>
     <artifactId>java-http-to-ems</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
     <packaging>jar</packaging>
     <name>Java HTTP to EMS</name>
-    <description>HTTP server that accepts GET/POST and forwards to TIBCO EMS via JMS</description>
+    <description>HTTP server that accepts GET/POST and forwards to TIBCO EMS via JMS. Uses TIBCO EMS JARs: tibjms.jar, jms-2.0.jar, javax.jms-api-2.0.1.jar (place in lib/). See Dockerfile for containerized build.</description>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -18,20 +18,27 @@
     </properties>
 
     <dependencies>
-        <!-- JMS API (for compilation; TIBCO tibjms.jar also provides it at runtime) -->
+        <!-- JMS 2.0 API (for compilation) -->
         <dependency>
             <groupId>javax.jms</groupId>
             <artifactId>javax.jms-api</artifactId>
             <version>2.0.1</version>
         </dependency>
-        <!-- TIBCO EMS client from local path (optional at compile: use -Ptibco or have C:\JAVA-JARS\tibjms.jar) -->
+        <!-- TIBCO EMS: tibjms.jar - EMS client library (from TIBCO EMS installation) -->
         <dependency>
             <groupId>com.tibco</groupId>
             <artifactId>tibjms</artifactId>
             <version>8.6</version>
             <scope>system</scope>
-            <systemPath>C:\JAVA-JARS\tibjms.jar</systemPath>
-            <optional>true</optional>
+            <systemPath>${project.basedir}/lib/tibjms.jar</systemPath>
+        </dependency>
+        <!-- TIBCO EMS: jms-2.0.jar - JMS 2.0 implementation -->
+        <dependency>
+            <groupId>com.tibco</groupId>
+            <artifactId>tibems</artifactId>
+            <version>8.6.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/jms-2.0.jar</systemPath>
         </dependency>
     </dependencies>
 
